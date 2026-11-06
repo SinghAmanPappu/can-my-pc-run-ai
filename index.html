@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Can My PC Run It? — Local AI Hardware Checker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Source+Code+Pro:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f7fdfa;
+    --surface:#ffffff;
+    --text:#0f3d34;
+    --muted:#5b7a72;
+    --accent:#0e7c73;
+    --accent-dark:#0b5f57;
+    --line:#d8ede6;
+    --good:#1b7a3e;
+    --warn:#b45309;
+    --bad:#b3261e;
+    --shadow:0 6px 18px rgba(15,61,52,0.06);
+    --radius:12px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0b2420;
+      --surface:#112e29;
+      --text:#e6f4f0;
+      --muted:#9cc4bc;
+      --accent:#4cc9c0;
+      --accent-dark:#3aa8a0;
+      --line:#1f4d45;
+      --good:#6fd18a;
+      --warn:#f5a623;
+      --bad:#f87171;
+      --shadow:0 6px 18px rgba(0,0,0,0.35);
+    }
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:"Inter",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    background:var(--bg); color:var(--text);
+    line-height:1.55; min-height:100vh;
+  }
+  /* ---------- Header with heartbeat line ---------- */
+  header{
+    position:relative;
+    background:var(--surface);
+    border-bottom:1px solid var(--line);
+    padding:28px 20px 24px;
+    box-shadow:var(--shadow);
+  }
+  .heartbeat{
+    position:absolute; left:0; right:0; top:0; height:3px;
+    background:linear-gradient(90deg, transparent 40%, var(--accent) 40% 60%, transparent 60%);
+    opacity:0.9;
+    box-shadow:0 0 10px var(--accent);
+  }
+  .brand{display:flex; align-items:center; gap:12px; max-width:900px; margin:0 auto;}
+  .mark{
+    width:36px;height:36px;border-radius:10px;background:var(--accent);
+    display:grid;place-items:center;color:#fff;font-weight:800;font-size:1.15rem;letter-spacing:-1px;
+  }
+  h1{font-size:1.45rem;font-weight:800;letter-spacing:-0.5px}
+  h1 .sub{display:block;font-weight:400;font-size:0.85rem;color:var(--muted);margin-top:2px}
+  .tagline{
+    max-width:900px;margin:10px auto 0;padding:0 20px;font-size:0.95rem;color:var(--muted);
+  }
+
+  main{max-width:980px;margin:32px auto;padding:0 20px;display:flex;flex-direction:column;gap:32px}
+  @media (max-width:560px){ main{padding:0 14px} }
+  section.panel.checker{max-width:780px}
+
+  /* ---------- Checker panel ---------- */
+  .panel{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:24px;
+  }
+  h2{font-size:1.1rem;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  h2 .dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+  .sticky{}
+
+  .field{margin-bottom:16px}
+  .field label{display:block;font-size:0.85rem;color:var(--muted);margin-bottom:6px;font-weight:600}
+  .field input,.field select{
+    width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line);
+    background:var(--bg);color:var(--text);font-size:0.95rem;
+  }
+  .field input:focus,.field select:focus{outline:none;border-color:var(--accent)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:560px){ .row{grid-template-columns:1fr} }
+  .toggle{display:flex;align-items:center;gap:10px;margin-top:8px}
+  .toggle input{width:auto}
+  .btn{
+    width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);background:var(--surface);
+    color:var(--text);font-size:1rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .btn:hover{border-color:var(--accent);color:var(--accent-dark)}
+  .btn:active{transform:translateY(1px)}
+  .btn .k{font-family:"Source Code Pro",monospace;font-size:0.85rem}
+
+  .detect-note{font-size:0.8rem;color:var(--muted);margin-top:6px}
+
+  /* ---------- Results ---------- */
+  .best-pick{
+    background:linear-gradient(180deg,var(--accent),var(--accent-dark));
+    color:#fff;border-radius:var(--radius);padding:18px 20px;margin-top:20px;
+  }
+  .best-pick h3{font-size:1rem;margin-bottom:8px;opacity:0.95}
+  .best-pick .pick{font-size:1.25rem;font-weight:800;margin-bottom:4px}
+  .best-pick .cmd{margin-top:10px}
+  .cmdbox{
+    background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.3);border-radius:8px;
+    padding:10px 12px;font-family:"Source Code Pro",monospace;font-size:0.85rem;overflow:auto;white-space:pre-wrap;word-break:break-all;
+  }
+  .copy-btn{
+    margin-top:8px;padding:6px 10px;border-radius:6px;border:none;background:rgba(255,255,255,0.2);color:#fff;
+    font-size:0.8rem;cursor:pointer
+  }
+  .copy-btn:active{transform:translateY(1px)}
+
+  .est-note{font-size:0.78rem;color:#dff4f1;margin-top:8px;display:block}
+
+  /* table */
+  .table-wrap{overflow-x:auto;margin-top:18px;-webkit-overflow-scrolling:touch}
+  table{width:100%;min-width:780px;border-collapse:collapse;font-size:0.86rem}
+  th{text-align:left;padding:10px 8px;border-bottom:2px solid var(--line);color:var(--muted);font-weight:700;white-space:nowrap}
+  td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle;overflow-wrap:normal;word-break:normal}
+  td:last-child,td:nth-child(6),td:nth-child(7){white-space:nowrap}
+  tr:hover td{background:#f1f7f5}
+  @media (prefers-color-scheme: dark){tr:hover td{background:#163d36}}
+  th:nth-child(1),td:nth-child(1){width:20%}
+  th:nth-child(2),td:nth-child(2){width:7%}
+  th:nth-child(3),td:nth-child(3){width:10%}
+  th:nth-child(4),td:nth-child(4){width:9%}
+  th:nth-child(5),td:nth-child(5){width:15%}
+  th:nth-child(6),td:nth-child(6){width:13%}
+  th:nth-child(7),td:nth-child(7){width:10%}
+  th:nth-child(8),td:nth-child(8){width:16%}
+  .mono{font-family:"Source Code Pro",monospace;font-size:0.8rem;overflow-wrap:normal;word-break:normal}
+  .tag{font-family:"Source Code Pro",monospace;font-size:0.78rem;background:var(--bg);padding:2px 6px;border-radius:6px;color:var(--accent-dark);border:1px solid var(--line)}
+  .label-fast{color:var(--good);font-weight:700}
+  .label-comfort{color:var(--good)}
+  .label-slow{color:var(--warn)}
+  .label-very{color:var(--bad)}
+  .none-fit{color:var(--muted);font-style:italic}
+
+  /* ---------- Probe / tricks ---------- */
+  .probeset{margin-top:30px}
+  h3.sub{font-size:0.95rem;margin-bottom:10px;color:var(--muted);font-weight:700}
+  .download-card{
+    border:1px dashed var(--line);border-radius:var(--radius);padding:16px;background:var(--surface);margin-bottom:14px
+  }
+  .download-card .btn{background:var(--accent);border-color:var(--accent);color:#fff}
+  .download-card .btn:hover{background:var(--accent-dark);border-color:var(--accent-dark);color:#fff}
+
+  .accordion{border-top:1px solid var(--line)}
+  .accordion .item{border-bottom:1px solid var(--line)}
+  .accordion button{
+    width:100%;text-align:left;padding:14px 16px;background:none;border:none;
+    font-family:inherit;font-weight:700;color:var(--text);font-size:0.9rem;cursor:pointer;
+    display:flex;justify-content:space-between;align-items:center
+  }
+  .accordion button:hover{background:rgba(14,124,115,0.05)}
+  .accordion .arrow{font-size:1.2rem;line-height:1;color:var(--muted)}
+  .accordion .panel-content{padding:0 16px;max-height:0;overflow:hidden;transition:max-height 0.25s ease;font-size:0.9rem;color:var(--muted)}
+  .accordion .panel-content p{margin-bottom:8px}
+  .accordion .panel-content ul{margin:6px 0 6px 18px}
+  .accordion .panel-content li{margin-bottom:4px}
+  .accordion .panel-content code{font-family:"Source Code Pro",monospace;background:var(--bg);padding:2px 6px;border-radius:4px;border:1px solid var(--line)}
+
+  footer{
+    border-top:1px solid var(--line);padding:30px 20px;max-width:980px;margin:40px auto 0;
+    font-size:0.8rem;color:var(--muted);text-align:center
+  }
+  footer a{color:var(--accent);text-decoration:none}
+  footer a:hover{text-decoration:underline}
+
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="heartbeat" aria-hidden="true"></div>
+  <div class="brand">
+    <div class="mark">❤</div>
+    <div>
+      <h1>Can My PC Run It?<span class="sub">local AI hardware checker &bull; free, no sign-up, no data collected</span></h1>
+    </div>
+  </div>
+  <p class="tagline">Find out which large language models your computer can run, how fast they&rsquo;ll answer, and how to run bigger ones. Nothing is uploaded &mdash; everything runs in this browser.</p>
+</header>
+
+<main>
+  <section class="panel checker">
+    <h2><span class="dot" aria-hidden="true"></span>Checker</h2>
+    <p class="detect-note">Speeds are <strong>estimates</strong> (&plusmn; about 40%) based on memory bandwidth. Enter what you know, then click <strong>Detect my hardware</strong> or change any value &mdash; results recalculate instantly.</p>
+
+    <div class="row">
+      <div class="field">
+        <label>Free RAM (GB)</label>
+        <input type="number" id="ram" min="0" step="0.5" placeholder="e.g. 8" value="8">
+      </div>
+      <div class="field">
+        <label>Memory type</label>
+        <select id="memtype">
+          <option value="ddr4_single">DDR4 single-channel (~20 GB/s)</option>
+          <option value="ddr4_dual" selected>DDR4 dual-channel (~40 GB/s)</option>
+          <option value="ddr5_dual">DDR5 dual-channel (~70 GB/s)</option>
+          <option value="apple_base">Apple Silicon base (~100 GB/s shared)</option>
+          <option value="apple_pro">Apple Silicon Pro (~200 GB/s shared)</option>
+          <option value="apple_max">Apple Silicon Max (~400 GB/s shared)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>GPU VRAM (GB)</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="number" id="vram" min="0" step="0.5" placeholder="e.g. 8" value="0">
+        <span class="detect-note">0 = none / unknown. Browsers can&rsquo;t read VRAM.</span>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>GPU class</label>
+        <select id="gpuclass">
+          <option value="entry">Entry (~200 GB/s)</option>
+          <option value="mid" selected>Mid (~300 GB/s)</option>
+          <option value="upper-mid">Upper-mid (~480 GB/s)</option>
+          <option value="high">High (~950 GB/s)</option>
+          <option value="none">No discrete GPU</option>
+        </select>
+      </div>
+      <div class="field" style="display:flex;align-items:flex-end">
+        <label class="toggle">
+          <input type="checkbox" id="apple"> Apple Silicon (shared memory)
+        </label>
+      </div>
+    </div>
+
+    <p class="detect-note">Detected by browser: <span id="detect-cpu">?</span> CPU threads &bull; <span id="detect-ram">?</span> GB RAM &bull; GPU guess: <span id="detect-gpu">?</span></p>
+    <button class="btn" id="detect">Detect my hardware</button>
+  </section>
+
+  <section class="panel">
+    <h2><span class="dot" aria-hidden="true"></span>Results</h2>
+    <div id="best-pick" class="best-pick" style="display:none">
+      <h3>Best balanced pick</h3>
+      <div class="pick" id="pick-name">—</div>
+      <div id="pick-detail">—</div>
+      <div class="cmd">
+        <span class="mono" id="pick-cmd">ollama run MODEL</span>
+        <button class="copy-btn" id="copy-btn">Copy command</button>
+        <span class="est-note" id="pick-est">Estimated speed: — tokens/sec (estimate)</span>
+      </div>
+    </div>
+
+    <div class="table-wrap" id="table-wrap">
+      <table id="results-table">
+        <thead>
+          <tr>
+            <th>Model</th><th>Params</th><th>Best quant</th><th>Memory (GB)</th><th>Mode</th><th>Est. speed</th><th>Label</th><th>Run command</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+      <p id="empty-msg" class="none-fit" style="margin-top:10px;display:none">No model fits these specs. Try more RAM, a 4-bit model, or a smaller MoE model.</p>
+    </div>
+  </section>
+
+  <aside class="panel probeset">
+    <h3 class="sub">Download the probe (exact measurement)</h3>
+    <div class="download-card">
+      <p style="margin-bottom:10px">The browser checker is an estimate. For exact numbers, download this single Python script and run it on your PC. It needs nothing installed &mdash; Python standard library only. It reads your CPU, RAM, GPU, measures memory and disk speed, then prints a diagnosis and prescription.</p>
+      <a href="llm_probe.py" download class="btn" style="background:var(--accent);border-color:var(--accent);color:#fff">Download llm_probe.py</a>
+      <div style="margin-top:10px;font-size:0.8rem;color:var(--muted)">Run: <code style="font-family:Source Code Pro,monospace">python llm_probe.py</code> &bull; Flags: <code>--vram 8</code> <code>--ram 16</code> <code>--json</code> <code>--cleanup</code> <span class="est-note" style="margin-top:4px;display:block">--cleanup deletes the script when you're done.</span></div>
+    </div>
+
+    <h3 class="sub">12 tricks to fit more & run faster</h3>
+    <div class="accordion" id="tricks">
+      <div class="item">
+        <button data-target="t1">Use 4-bit models (Q4_K_M) <span class="arrow">▼</span></button>
+        <div class="panel-content" id="t1">Memory &asymp; parameters &times; bits &divide; 8. A 7B model at 4-bit is about 4&ndash;5 GB. Always try 4-bit first.</div>
+      </div>
+      <div class="item">
+        <button data-target="t2">Shrink the context window <span class="arrow">▼</span></button>
+        <div class="panel-content" id="t2">Smaller context uses less RAM. Ollama: <code>/set parameter num_ctx 4096</code> or <code>llama-server -m model.gguf -c 4096</code>.</div>
+      </div>
+      <div class="item">
+        <button data-target="t3">Compress the KV cache <span class="arrow">▼</span></button>
+        <div class="panel-content" id="t3">Ollama: <code>OLLAMA_FLASH_ATTENTION=1</code> and <code>OLLAMA_KV_CACHE_TYPE=q8_0</code>. llama.cpp: <code>-fa --cache-type-k q8_0 --cache-type-v q8_0</code>.</div>
+      </div>
+      <div class="item">
+        <button data-target="t4">Try MoE models <span class="arrow">▼</span></button>
+        <div class="panel-content" id="t4">Mixture-of-Experts models such as <code>gpt-oss:20b</code> and <code>qwen3:30b-a3b</code> have huge total params but tiny active params &mdash; they fit where dense models won't.</div>
+      </div>
+      <div class="item">
+        <button data-target="t5">Close heavy apps <span class="arrow">▼</span></button>
+        <div class="panel-content" id="t5">Close your browser and other RAM-hungry apps before running a model. Disable startup apps you don't need.</div>
+      </div>
+      <div class="item">
+        <button data-target="t6">Offload layers to GPU <span class="arrow">▼</span></button>
+        <div class="panel-content" id="t6">Use <code>-ngl 99</code> in Ollama to send layers to the GPU. Lower it if you run out of VRAM.</div>
+      </div>
+      <div class="item">
+        <button data-target="t7">Check your RAM sticks <span class="arrow">▼</span></button>
+        <div class="panel-content" id="t7">Two matching sticks (dual-channel) can nearly double CPU speed. On laptops, plug in the charger and use performance mode.</div>
+      </div>
+      <div class="item">
+        <button data-target="t8">Use physical cores for threads <span class="arrow">▼</span></button>
+        <div class="panel-content" id="t8">Set <code>-t 6</code> (or your physical core count) instead of thread count. Hyper-threaded cores don't help inference much.</div>
+      </div>
+      <div class="item">
+        <button data-target="t9">Add virtual memory <span class="arrow">▼</span></button>
+        <div class="panel-content" id="t9">Increase page file (Windows) or swap/zram (Linux/macOS). Models will run, but slowly.</div>
+      </div>
+      <div class="item">
+        <button data-target="t10">Free cloud GPUs <span class="arrow">▼</span></button>
+        <div class="panel-content" id="t10">Google Colab and Kaggle Notebooks offer free GPUs within weekly limits.</div>
+      </div>
+      <div class="item">
+        <button data-target="t11">Pool two computers <span class="arrow">▼</span></button>
+        <div class="panel-content" id="t11">Join two machines with <code>exo</code> or llama.cpp RPC mode to run a bigger model together.</div>
+      </div>
+      <div class="item">
+        <button data-target="t12">Upgrade order <span class="arrow">▼</span></button>
+        <div class="panel-content" id="t12">Second RAM stick &rarr; SSD &rarr; GPU with more VRAM.</div>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<footer>
+  <p>No data is collected. Nothing leaves your computer. Not affiliated with any model maker. Model names are used only to identify models.</p>
+  <p style="margin-top:6px">Model catalog last updated: <span id="last-updated">—</span> &bull; <span id="catalog-source">(embedded defaults)</span> &bull; <a href="https://github.com" target="_blank" rel="noopener">View on GitHub</a> &bull; <a href="llm_probe.py" download>Download probe</a></p>
+</footer>
+
+<script>
+// ---- Shared spec (mirrors llm_probe.py Section 6) ----
+const QUANTIZATIONS = [
+  ["Q8_0", 8.5], ["Q6_K", 6.6], ["Q5_K_M", 5.7], ["Q4_K_M", 4.85], ["Q3_K_M", 3.9], ["Q2_K", 3.0]
+];
+
+const MODELS = [
+  {name:"Qwen 2.5 1.5B", params:1.5, tag:"qwen2.5:1.5b", moeActive:null, note:""},
+  {name:"Llama 3.2 3B", params:3.0, tag:"llama3.2:3b", moeActive:null, note:""},
+  {name:"Gemma 3 4B", params:4.0, tag:"gemma3:4b", moeActive:null, note:""},
+  {name:"Llama 3.1 8B", params:8.0, tag:"llama3.1:8b", moeActive:null, note:""},
+  {name:"Qwen3 8B", params:8.0, tag:"qwen3:8b", moeActive:null, note:""},
+  {name:"Gemma 3 12B", params:12.0, tag:"gemma3:12b", moeActive:null, note:""},
+  {name:"Phi-4 14B", params:14.0, tag:"phi4:14b", moeActive:null, note:""},
+  {name:"gpt-oss 20B (MoE)", params:20.0, tag:"gpt-oss:20b", moeActive:3.6, note:"Mixture-of-Experts"},
+  {name:"Qwen3 30B-A3B (MoE)", params:30.0, tag:"qwen3:30b-a3b", moeActive:3.3, note:"Mixture-of-Experts"},
+  {name:"Gemma 3 27B", params:27.0, tag:"gemma3:27b", moeActive:null, note:""},
+  {name:"Qwen3 32B", params:32.0, tag:"qwen3:32b", moeActive:null, note:""},
+  {name:"Llama 3.3 70B", params:70.0, tag:"llama3.3:70b", moeActive:null, note:""},
+  {name:"gpt-oss 120B (MoE)", params:120.0, tag:"gpt-oss:120b", moeActive:5.1, note:"Mixture-of-Experts"},
+];
+
+const GPU_BW = {entry:200, mid:300, "upper-mid":480, high:950};
+const RAM_BW = {ddr4_single:20, ddr4_dual:40, ddr5_dual:70, apple_base:100, apple_pro:200, apple_max:400};
+const OS_RESERVE = 2.5;
+const VRAM_HEADROOM = 0.5;
+const APPLE_SHARED = 0.85;
+const EFF_GPU = 0.6;
+const EFF_SPLIT = 0.68; // calibrated: real/est ratio ~0.67 from Phase 1
+const EFF_CPU = 0.6;
+const LAST_UPDATED = "2026-11-06";
+
+document.getElementById("last-updated").textContent = LAST_UPDATED;
+
+// ---- Browser detection ----
+function detectBrowser(){
+  const threads = navigator.hardwareConcurrency || 0;
+  // deviceMemory is capped at 8 GB by browsers
+  const ram = (navigator.deviceMemory || 0);
+  let gpuGuess = "unknown";
+  let gpuClass = "mid";
+  try {
+    const canvas = document.createElement("canvas");
+    const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+    if(gl){
+      let renderer = gl.getParameter(gl.RENDERER) || "";
+      // Most browsers hide the real GPU behind "WebKit WebGL"; ask for the unmasked name.
+      const ext = gl.getExtension("WEBGL_debug_renderer_info");
+      if(ext){
+        const unmasked = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
+        if(unmasked && !/webkit/i.test(unmasked)) renderer = unmasked;
+      }
+      const r = renderer.toLowerCase();
+      gpuGuess = renderer;
+      if(r.includes("apple") || r.includes("m1") || r.includes("m2") || r.includes("m3")){ gpuClass="high"; }
+      else if(r.includes("nvidia") || r.includes("geforce") || r.includes("rtx") || r.includes("gtx")){ gpuClass="mid"; }
+      else if(r.includes("amd") || r.includes("radeon")){ gpuClass="mid"; }
+      else if(r.includes("intel") || r.includes("iris") || r.includes("uhd") || r.includes("hd graphics")){ gpuClass="entry"; }
+    }
+  }catch(e){}
+  return {threads, ram, gpuGuess, gpuClass};
+}
+
+const det = detectBrowser();
+document.getElementById("detect-cpu").textContent = det.threads ? det.threads + "" : "?";
+document.getElementById("detect-ram").textContent = det.ram ? det.ram + " GB (browser-capped at 8 GB)" : "?";
+document.getElementById("detect-gpu").textContent = det.gpuGuess;
+
+document.getElementById("detect").addEventListener("click", ()=>{
+  document.getElementById("ram").value = det.ram || 8;
+  document.getElementById("gpuclass").value = det.gpuClass;
+  if(det.gpuGuess.toLowerCase().includes("apple") || det.gpuGuess.toLowerCase().includes("m1") || det.gpuGuess.toLowerCase().includes("m2") || det.gpuGuess.toLowerCase().includes("m3")){
+    document.getElementById("apple").checked = true;
+    document.getElementById("memtype").value = "apple_base";
+  }
+  compute();
+});
+
+// ---- Estimation (mirrors probe) ----
+function modelMemoryGB(params, bits){ return params * bits / 8.0 + 1.0; }
+function bytesPerWord(params, bits, moeActive){
+  const active = moeActive || params;
+  return active * bits / 8.0; // GB (billions of bytes)
+}
+function speedLabel(tps){
+  if(tps>=20) return {t:"fast", c:"label-fast"};
+  if(tps>=8) return {t:"comfortable", c:"label-comfort"};
+  if(tps>=3) return {t:"slow but usable", c:"label-slow"};
+  return {t:"very slow", c:"label-very"};
+}
+
+function estimateModel(m, ram, vram, ramBw, gpuBw, gpuClass, apple){
+  const usableRam = ram - OS_RESERVE;
+  const usableMem = apple ? usableRam * APPLE_SHARED : usableRam;
+  const gpuMem = vram ? vram - VRAM_HEADROOM : null;
+
+  for(const [qname, bits] of QUANTIZATIONS){
+    const mem = modelMemoryGB(m.params, bits);
+    const active = m.moeActive || m.params;
+    const bPerWord = active * bits / 8.0;
+
+    const fitsGpu = gpuMem!==null && mem <= gpuMem;
+    const fitsSplit = gpuMem!==null && mem <= (gpuMem + usableMem);
+    const fitsCpu = mem <= usableMem;
+
+    let tps, mode, f;
+    if(fitsGpu){ tps = EFF_GPU * gpuBw / bPerWord; mode="All on GPU"; f=1.0; }
+    else if(fitsSplit){ f = gpuMem / mem; f=Math.max(0,Math.min(1,f)); const tpw = f*bPerWord/gpuBw + (1-f)*bPerWord/ramBw; tps = EFF_SPLIT/tpw; mode=`CPU+GPU split (~${Math.round(f*100)}% GPU)`; }
+    else if(fitsCpu){ tps = EFF_CPU * ramBw / bPerWord; mode="CPU only"; f=0; }
+    else continue;
+
+    const label = speedLabel(tps);
+    return {
+      name:m.name, tag:m.tag, params:m.params, moeActive:m.moeActive, note:m.note,
+      quant:qname, bits, mem, mode, f, fitsGpu, fitsCpu,
+      tps, tpsLow:tps*0.6, tpsHigh:tps*1.4, labelT:label.t, labelC:label.c
+    };
+  }
+  return null;
+}
+
+function pickBest(results){
+  const viable = results.filter(Boolean);
+  if(!viable.length) return null;
+  // Best balanced = most capable model still running comfortably (>=8 toks/s)
+  const comfortable = viable.filter(r => r.tps >= 8);
+  if(comfortable.length){
+    comfortable.sort((a,b)=> (b.params - a.params) || (b.tps - a.tps));
+    return comfortable[0];
+  }
+  viable.sort((a,b)=> (b.tps - a.tps) || (b.params - a.params));
+  return viable[0];
+}
+
+function compute(){
+  const ram = parseFloat(document.getElementById("ram").value) || 0;
+  const memtype = document.getElementById("memtype").value;
+  const vram = parseFloat(document.getElementById("vram").value) || null;
+  const gpuclass = document.getElementById("gpuclass").value;
+  const apple = document.getElementById("apple").checked;
+
+  let ramBw = RAM_BW[memtype] || 20;
+  let gpuBw = gpuclass==="none" ? 0 : (GPU_BW[gpuclass] || 300);
+
+  const results = MODELS.map(m => estimateModel(m, ram, vram, ramBw, gpuBw, gpuclass, apple));
+  const best = pickBest(results);
+
+  renderResults(results, best);
+  renderBestPick(best, ram, vram, ramBw, gpuBw, apple);
+}
+
+function renderResults(results, best){
+  const tbody = document.getElementById("table-body");
+  const empty = document.getElementById("empty-msg");
+  const wrap = document.getElementById("table-wrap");
+  tbody.innerHTML = "";
+  let any = false;
+  for(const r of results){
+    if(!r) continue;
+    any = true;
+    const tr = document.createElement("tr");
+    const labelCls = r.labelC;
+    const isBest = best && r.tag === best.tag;
+    tr.innerHTML = `
+      <td style="${isBest?'font-weight:800;color:var(--accent-dark)':''}">${r.name}${r.note?' <span style="font-size:0.7rem;color:var(--muted);">('+r.note+')</span>':''}</td>
+      <td>${r.params} B</td>
+      <td><span class="tag">${r.quant}</span></td>
+      <td>${r.mem.toFixed(1)}</td>
+      <td>${r.mode}</td>
+      <td><strong>${r.tps.toFixed(0)}</strong> <span style="font-size:0.75rem;color:var(--muted)">(${r.tpsLow.toFixed(0)}&ndash;${r.tpsHigh.toFixed(0)})</span> toks/s</td>
+      <td class="${labelCls}">${r.labelT}</td>
+      <td><code class="mono">ollama run ${r.tag}</code></td>
+    `;
+    tbody.appendChild(tr);
+  }
+  if(!any){
+    wrap.style.display="none";
+    empty.style.display="block";
+  }else{
+    wrap.style.display="block";
+    empty.style.display="none";
+  }
+}
+
+function renderBestPick(best, ram, vram, ramBw, gpuBw, apple){
+  const bp = document.getElementById("best-pick");
+  const name = document.getElementById("pick-name");
+  const detail = document.getElementById("pick-detail");
+  const cmd = document.getElementById("pick-cmd");
+  const est = document.getElementById("pick-est");
+  if(!best){ bp.style.display="none"; return; }
+  bp.style.display="block";
+  name.textContent = best.name + (best.moeActive? ` (MoE, ~${best.moeActive}B active)` : "");
+  detail.textContent = `${best.quant} (${best.bits}-bit) • ~${best.mem.toFixed(1)} GB • ${best.mode} • ${best.tps.toFixed(0)} toks/s est.`;
+  cmd.textContent = `ollama run ${best.tag}`;
+  est.textContent = `Estimated speed: ${best.tps.toFixed(0)} tokens/sec (${best.tpsLow.toFixed(0)}&ndash;${best.tpsHigh.toFixed(0)}) &mdash; ${best.labelT}. This is an estimate.`;
+  est.className = "est-note " + (best.labelC);
+}
+
+document.getElementById("copy-btn").addEventListener("click", ()=>{
+  const txt = document.getElementById("pick-cmd").textContent;
+  navigator.clipboard.writeText(txt).then(()=>{
+    const b = document.getElementById("copy-btn");
+    const old = b.textContent;
+    b.textContent = "Copied!";
+    setTimeout(()=>{ b.textContent = old; }, 1200);
+  });
+});
+
+// Recompute on any input change
+document.querySelectorAll("input, select").forEach(el=>el.addEventListener("input", compute));
+
+// Try to load models.json if present (same origin), otherwise use embedded list
+let CATALOG_SOURCE = "embedded defaults";
+async function loadCatalog(){
+  try{
+    const res = await fetch("models.json", {cache:"no-store"});
+    if(res.ok){
+      const data = await res.json();
+      if(data.models && data.models.length){
+        MODELS.length = 0;
+        data.models.forEach(m=>MODELS.push(m));
+        CATALOG_SOURCE = "models.json";
+        document.getElementById("catalog-source").textContent = "models.json";
+      }
+      if(data.last_updated) document.getElementById("last-updated").textContent = data.last_updated;
+    }
+  }catch(e){ /* embedded fallback — site stays offline-capable */ }
+  compute();
+}
+compute(); // render instantly from embedded catalog; fetch updates it after
+loadCatalog();
+
+// Accordion
+document.querySelectorAll(".accordion button").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    const target = document.getElementById(btn.dataset.target);
+    const open = target.style.maxHeight && target.style.maxHeight !== "0px";
+    // close all
+    document.querySelectorAll(".accordion .panel-content").forEach(p=>{ p.style.maxHeight="0"; });
+    document.querySelectorAll(".accordion .arrow").forEach(a=>{ a.textContent="▼"; });
+    if(!open){
+      target.style.maxHeight = target.scrollHeight + "px";
+      btn.querySelector(".arrow").textContent="▲";
+    }
+  });
+});
+</script>
+</body>
+</html>

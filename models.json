@@ -1,0 +1,19 @@
+{
+  "last_updated": "2026-11-06",
+  "note": "Model catalog shared by the website and llm_probe.py. Edit this file to add/remove models without touching code.",
+  "models": [
+    {"name": "Qwen 2.5 1.5B",   "params": 1.5,  "tag": "qwen2.5:1.5b",  "moeActive": null,  "note": ""},
+    {"name": "Llama 3.2 3B",    "params": 3.0,  "tag": "llama3.2:3b",   "moeActive": null,  "note": ""},
+    {"name": "Gemma 3 4B",      "params": 4.0,  "tag": "gemma3:4b",     "moeActive": null,  "note": ""},
+    {"name": "Llama 3.1 8B",    "params": 8.0,  "tag": "llama3.1:8b",   "moeActive": null,  "note": ""},
+    {"name": "Qwen3 8B",        "params": 8.0,  "tag": "qwen3:8b",      "moeActive": null,  "note": ""},
+    {"name": "Gemma 3 12B",     "params": 12.0, "tag": "gemma3:12b",    "moeActive": null,  "note": ""},
+    {"name": "Phi-4 14B",       "params": 14.0, "tag": "phi4:14b",      "moeActive": null,  "note": ""},
+    {"name": "gpt-oss 20B (MoE)", "params": 20.0, "tag": "gpt-oss:20b", "moeActive": 3.6,   "note": "Mixture-of-Experts"},
+    {"name": "Qwen3 30B-A3B (MoE)", "params": 30.0, "tag": "qwen3:30b-a3b", "moeActive": 3.3, "note": "Mixture-of-Experts"},
+    {"name": "Gemma 3 27B",     "params": 27.0, "tag": "gemma3:27b",    "moeActive": null,  "note": ""},
+    {"name": "Qwen3 32B",       "params": 32.0, "tag": "qwen3:32b",     "moeActive": null,  "note": ""},
+    {"name": "Llama 3.3 70B",   "params": 70.0, "tag": "llama3.3:70b",  "moeActive": null,  "note": ""},
+    {"name": "gpt-oss 120B (MoE)", "params": 120.0, "tag": "gpt-oss:120b", "moeActive": 5.1, "note": "Mixture-of-Experts"}
+  ]
+}
